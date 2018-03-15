@@ -14,6 +14,10 @@ def deltah(_m):
     dh = _m * (2 + _m)
     return dh
 
+def deltal(_m):
+    dl = _m * (2 - _m)
+    return dl
+
 # Bounds for A2: A2 in (A2L,A2H)
 def a2l(_m):
     a2low = deltah(_m) / 12.0
@@ -172,28 +176,52 @@ def pin2(_p,_m,_alpha1,_pStar,_pLow):
     f = 0.25*_p * (capt + shop)
     return f
 
+##### Derivatives of Deviation Profits
+def dpin1Dev(_m,_alpha2):
+    f = 0.25 * (  1 - _alpha2 * deltal(_m) - (1 - _m**2) * ( ( 1 + _m )**2 - _alpha2 * deltah(_m) )  )
+    return f
+
+def dpin2Dev(_m,_alpha1):
+    f = 0.25 * (  1 - _alpha1 * deltal(_m) - (1 - _m**2) * ( ( 1 + _m )**2 - _alpha1 * deltah(_m) )  )
+    return f
+
+##### Banana condition
+def bananaCondition(_m,_alpha1,_alpha2,_pLow):
+    b = 0.5 * ( _pLow * (3 - (_alpha1 + _alpha2) * deltah(_m) ) - 1 )
+    return b
+
+##### Write to CSV file
+
+def write(_row):
+    with open("asymmetric.csv", "a") as f:
+        writer = csv.writer(f, quoting = csv.QUOTE_NONNUMERIC)
+        writer.writerow(_row)
+
 
 #########################
 # VARIABLES / PARAMETERS
 #########################
 
 # set up array for mu in (0,1)
-MU = np.arange(0.01,1,.01)
-A = np.arange(0.01,1,.01)
+MU = np.arange(0.01,1,.005)
+A = np.arange(0.01,1,.005)
+HEADERS = ["mu","A1","A2","alpha1","alpha2","pLow","pStar","Profit1","Profit2", \
+            "A2hi","A2lo","A1lo","DPi1Adev","DPi2Adev","banana"]
 
 ########################
 # FINAL PROGRAM
 ########################
+write(HEADERS)
 
 # generate mu x A2 x A1 grid
 for m in MU:
-    m = round(m, 2)
+    m = round(m, 3)
 
     a2low = a2l(m)
     a2hi = a2h(m)
 
     for a2 in A:
-        a2 = round(a2, 2)
+        a2 = round(a2, 3)
 
         if a2 > a2low and a2 < a2hi:
 
@@ -204,7 +232,7 @@ for m in MU:
             a1hi = a2
 
             for a1 in A:
-                a1 = round(a1, 2)
+                a1 = round(a1, 3)
 
                 if a1 > a1low and a1 < a1hi:
 
@@ -214,6 +242,10 @@ for m in MU:
                     beta_1 = beta1(m,alpha_2,alpha_1)
                     beta_2 = beta2(m,alpha_2,alpha_1)
 
+                    dpin1_dev = dpin1Dev(m,alpha_2)
+                    dpin2_dev = dpin2Dev(m,alpha_1)
+
+                    banana = bananaCondition(m,alpha_1,alpha_2,p_low)
 
                     fa_1b = fa1(p_star,m,alpha_1,p_star)
                     fa_1t = fa1(1,m,alpha_1,p_star)
@@ -280,3 +312,13 @@ for m in MU:
 
                     if (fa_1t != 1) or (fn_2t != 1):
                         print("Error with mass points")
+
+                    results = [m,a1,a2,alpha_1,alpha_2,p_low,p_star,pia_1t,pin_2t, \
+                                a2hi,a2low,a1low,dpin1_dev,dpin2_dev,banana]
+
+                    if (dpin1_dev < 0) and (dpin2_dev < 0):
+                        if (banana > 0):
+                            print("\nDPiN1dev = " + str(dpin1_dev) + "\nDPiN2dev = " + str(dpin2_dev) \
+                                    + "\nbanana = " + str(banana))
+
+                    write(results)
