@@ -190,6 +190,19 @@ def bananaCondition(_m,_alpha1,_alpha2,_pLow):
     b = 0.5 * ( _pLow * (3 - (_alpha1 + _alpha2) * deltah(_m) ) - 1 )
     return b
 
+##### Expected Prices
+def eP1(_m,_alpha1,_pLow,_pStar,_beta1):
+    chunk1 = 0.5 * ( 3 - _alpha1 * deltah(_m) ) * _pLow
+    chunk2 = 0.5 * ( (1+_m)**2 - _alpha1 * (deltah(_m) - 2) ) * _pStar
+    f = chunk1 * np.log(_pStar/_pLow) + chunk2 * np.log(1/_pStar) + _alpha1 * _beta1
+    return f
+
+def eP2(_m,_alpha2,_pLow,_pStar,_beta2):
+    chunk1 = 0.5 * ( 3 - _alpha2 * deltah(_m) ) * _pLow
+    chunk2 = 0.5 * ( (1+_m)**2 - _alpha2 * (deltah(_m) - 2) ) * _pStar
+    f = chunk1 * np.log(_pStar/_pLow) + chunk2 * np.log(1/_pStar) + ( 1 - _alpha2 ) * _beta2 * _pStar
+    return f
+
 ##### Write to CSV file
 
 def write(_row):
@@ -205,7 +218,7 @@ def write(_row):
 # set up array for mu in (0,1)
 MU = np.arange(0.01,1,.005)
 A = np.arange(0.01,1,.005)
-HEADERS = ["mu","A1","A2","alpha1","alpha2","pLow","pStar","Profit1","Profit2", \
+HEADERS = ["mu","A1","A2","alpha1","alpha2","pLow","pStar","Profit1","Profit2","EP1","EP2" \
             "A2hi","A2lo","A1lo","DPi1Adev","DPi2Adev","banana"]
 
 ########################
@@ -263,15 +276,20 @@ for m in MU:
                     fn_2b = fn2(p_low,m,alpha_2,p_star,p_low)
                     fn_2t = fn2(p_star,m,alpha_2,p_star,p_low)
 
+                    '''
                     if m == 0.2:
                         print("\nFa2(v): " + str(fa_2t) + "\nFn1(p*): " + str(fn_1t))
                         print("m: " + str(m) + "\nA2: " + str(a2) + "\nA1: " + str(a1))
                         print("Ahi2: " + str(a2hi))
+                    '''
 
                     pia_2b = pia2(p_star,m,a2,alpha_1,p_star)
 
                     pin_2b = pin2(p_low,m,alpha_1,p_star,p_low)
                     pin_2t = pin2(p_star,m,alpha_1,p_star,p_low)
+
+                    ep_1 = eP1(m,alpha_1,p_low,p_star,beta_1)
+                    ep_2 = eP2(m,alpha_2,p_low,p_star,beta_2)
 
                     '''
                     print("pia1(v)= " + str(pia_1t) + \
@@ -313,12 +331,30 @@ for m in MU:
                     if (fa_1t != 1) or (fn_2t != 1):
                         print("Error with mass points")
 
-                    results = [m,a1,a2,alpha_1,alpha_2,p_low,p_star,pia_1t,pin_2t, \
+                    results = [m,a1,a2,alpha_1,alpha_2,p_low,p_star,pia_1t,pin_2t,ep_1,ep_2, \
                                 a2hi,a2low,a1low,dpin1_dev,dpin2_dev,banana]
-
+                    '''
                     if (dpin1_dev < 0) and (dpin2_dev < 0):
                         if (banana > 0):
                             print("\nDPiN1dev = " + str(dpin1_dev) + "\nDPiN2dev = " + str(dpin2_dev) \
                                     + "\nbanana = " + str(banana))
+                    '''
 
+                    if (ep_1 >= 1) or (ep_1 <= 0):
+                        print("Error with EP_1")
+
+                    if (ep_2 >= 1) or (ep_2 <= 0):
+                        print("Error with EP_2")
+
+                    '''
+                    if (ep_1 > ep_2):
+                        print("Firm 1's price is higher")
+
+                    if (ep_1 > 0.5 * np.log(3)) and (ep_2 > 0.5 * np.log(3)):
+                        if (pin_1b + pin_2b > 0.5):
+                            print("higher prices and profits")
+
+                        else:
+                            print("higher prices, lower profits")
+                    '''
                     write(results)
